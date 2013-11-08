@@ -1,0 +1,40 @@
+#!/bin/zsh
+
+# Change to your install path. The rest of the code uses relative paths.
+cd ~/aam
+
+# Pulls the alt.anonymous.messages newsgroup down to local disk.
+# Configuration of slrnpull is in slrnpull.conf.
+torify slrnpull -d . -h snews://news.aioe.org
+# You should substitute for your own newserver, but the above should
+# work out of the box. Changing servers may have adverse effects due to
+# how slrnpull works.
+
+# First unattempted message.
+if [[ ! -f current ]]; then
+	cur=`ls news/alt/anonymous/messages|sort -n|head -n 1`
+else
+	cur=$(( $(<current) + 1 ))
+fi
+# Last message.
+max=`ls news/alt/anonymous/messages|sort -nr|head -n 1`
+
+for i in `seq $cur $max`; do
+	f=news/alt/anonymous/messages/$i
+	if [[ -f $f ]]; then
+		themail=$(gpg --batch --decrypt $f </dev/null) 2>&1 | \
+			read -u 0 -k 1024 gpgmessages
+		# Deliver the mail locally.
+		if [[ -n $themail ]]; then
+			(echo $gpgmessages | sed 's/^/X-GPG-OUT: /'; \
+				echo $themail) | sendmail -i $USER
+		fi
+		# else: decryption failed.
+
+		# Debug:
+		#echo $gpgmessages >&2
+	else
+		echo a.a.m mail: Message $i missing. >&2
+	fi
+	echo $i >current
+done
