@@ -22,17 +22,14 @@ max=`ls news/alt/anonymous/messages|sort -nr|head -n 1`
 for i in `seq $cur $max`; do
 	f=news/alt/anonymous/messages/$i
 	if [[ -f $f ]]; then
-		themail=$(gpg --batch --decrypt $f </dev/null) 2>&1 | \
-			read -u 0 -k 1024 gpgmessages
+		themail=$(gpg --passphrase "" --batch --decrypt $f </dev/null) 2>&1 | \
+			read -u 0 -k 2048 gpgmessages
 		# Deliver the mail locally.
 		if [[ -n $themail ]]; then
 			(echo $gpgmessages | sed 's/^/X-GPG-OUT: /'; \
 				echo $themail) | sendmail -i $USER
 		fi
 		# else: decryption failed.
-
-		# Debug:
-		#echo $gpgmessages >&2
 	else
 		echo a.a.m mail: Message $i missing. >&2
 	fi
